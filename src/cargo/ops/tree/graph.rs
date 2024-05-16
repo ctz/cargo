@@ -500,9 +500,12 @@ fn add_cli_features(
 
     // Create a set of feature names requested on the command-line.
     let mut to_add: HashSet<FeatureValue> = HashSet::new();
-    if cli_features.all_features {
-        to_add.extend(feature_map.keys().map(|feat| FeatureValue::Feature(*feat)));
-    }
+    to_add.extend(
+        feature_map
+            .keys()
+            .map(|feat| FeatureValue::Feature(*feat))
+            .filter(|feat| cli_features.all_features.includes(feat)),
+    );
 
     if cli_features.uses_default_features {
         to_add.insert(FeatureValue::Feature(InternedString::new("default")));

@@ -252,8 +252,8 @@ pub enum RequestedFeatures {
 pub struct CliFeatures {
     /// Features from the `--features` flag.
     pub features: Rc<BTreeSet<FeatureValue>>,
-    /// The `--all-features` flag.
-    pub all_features: bool,
+    /// The `--all-features` & `--all-features-except` flag.
+    pub all_features: FeatureFilter,
     /// Inverse of `--no-default-features` flag.
     pub uses_default_features: bool,
 }
@@ -263,27 +263,45 @@ impl CliFeatures {
     pub fn from_command_line(
         features: &[String],
         all_features: bool,
+        all_features_except: &[String],
         uses_default_features: bool,
     ) -> CargoResult<CliFeatures> {
         let features = Rc::new(CliFeatures::split_features(features));
-        // Some early validation to ensure correct syntax.
-        for feature in features.iter() {
-            match feature {
-                // Maybe call validate_feature_name here once it is an error?
-                FeatureValue::Feature(_) => {}
-                FeatureValue::Dep { .. } => {
-                    bail!(
-                        "feature `{}` is not allowed to use explicit `dep:` syntax",
-                        feature
-                    );
-                }
-                FeatureValue::DepFeature { dep_feature, .. } => {
-                    if dep_feature.contains('/') {
-                        bail!("multiple slashes in feature `{}` is not allowed", feature);
+        let all_features_except = Rc::new(CliFeatures::split_features(all_features_except));
+
+        if all_features && !all_features_except.is_empty() {
+            bail!("--all-features and --all-features-except are mutually exclusive");
+        }
+
+        for set in [&features, &all_features_except] {
+            // Some early validation to ensure correct syntax.
+            for feature in set.iter() {
+                match feature {
+                    // Maybe call validate_feature_name here once it is an error?
+                    FeatureValue::Feature(_) => {}
+                    FeatureValue::Dep { .. } => {
+                        bail!(
+                            "feature `{}` is not allowed to use explicit `dep:` syntax",
+                            feature
+                        );
+                    }
+                    FeatureValue::DepFeature { dep_feature, .. } => {
+                        if dep_feature.contains('/') {
+                            bail!("multiple slashes in feature `{}` is not allowed", feature);
+                        }
                     }
                 }
             }
         }
+
+        let all_features = if all_features {
+            FeatureFilter::All
+        } else if !all_features_except.is_empty() {
+            FeatureFilter::AllExcept(all_features_except)
+        } else {
+            FeatureFilter::None
+        };
+
         Ok(CliFeatures {
             features,
             all_features,
@@ -295,7 +313,10 @@ impl CliFeatures {
     pub fn new_all(all_features: bool) -> CliFeatures {
         CliFeatures {
             features: Rc::new(BTreeSet::new()),
-            all_features,
+            all_features: match all_features {
+                true => FeatureFilter::All,
+                false => FeatureFilter::None,
+            },
             uses_default_features: true,
         }
     }
@@ -309,6 +330,31 @@ impl CliFeatures {
             .map(InternedString::new)
             .map(FeatureValue::new)
             .collect()
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum FeatureFilter {
+    All,
+    AllExcept(Rc<BTreeSet<FeatureValue>>),
+    None,
+}
+
+impl FeatureFilter {
+    pub fn includes(&self, feat: &FeatureValue) -> bool {
+        match self {
+            Self::All => true,
+            Self::AllExcept(set) => !set.contains(feat),
+            Self::None => false,
+        }
+    }
+
+    pub fn all(&self) -> bool {
+        matches!(self, Self::All)
+    }
+
+    pub fn none(&self) -> bool {
+        matches!(self, Self::None)
     }
 }
 
@@ -765,9 +811,12 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             result.push(FeatureValue::Feature(default));
         }
 
-        if cli_features.all_features {
-            result.extend(feature_map.keys().map(|k| FeatureValue::Feature(*k)))
-        }
+        result.extend(
+            feature_map
+                .keys()
+                .map(|k| FeatureValue::Feature(*k))
+                .filter(|feat| cli_features.all_features.includes(feat)),
+        );
 
         result
     }

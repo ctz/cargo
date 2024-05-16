@@ -361,11 +361,13 @@ fn build_requirements<'a, 'b: 'a>(
             all_features,
             uses_default_features,
         }) => {
-            if *all_features {
-                for key in s.features().keys() {
-                    if let Err(e) = reqs.require_feature(*key) {
-                        return Err(e.into_activate_error(parent, s));
-                    }
+            for key in s
+                .features()
+                .keys()
+                .filter(|key| all_features.includes(&FeatureValue::Feature(**key)))
+            {
+                if let Err(e) = reqs.require_feature(*key) {
+                    return Err(e.into_activate_error(parent, s));
                 }
             }
 

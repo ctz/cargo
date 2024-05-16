@@ -73,7 +73,7 @@ struct InstallInfo {
     bins: BTreeSet<String>,
     /// Set of features explicitly enabled.
     features: BTreeSet<String>,
-    all_features: bool,
+    all_features: bool, // TODO
     no_default_features: bool,
     /// Either "debug" or "release".
     profile: String,
@@ -458,7 +458,7 @@ impl CrateListingV2 {
             info.bins.append(&mut bins.clone());
             info.version_req = version_req;
             info.features = feature_set(&opts.cli_features.features);
-            info.all_features = opts.cli_features.all_features;
+            info.all_features = opts.cli_features.all_features.all(); // TODO
             info.no_default_features = !opts.cli_features.uses_default_features;
             info.profile = opts.build_config.requested_profile.to_string();
             info.target = Some(target.to_string());
@@ -470,7 +470,7 @@ impl CrateListingV2 {
                     version_req,
                     bins: bins.clone(),
                     features: feature_set(&opts.cli_features.features),
-                    all_features: opts.cli_features.all_features,
+                    all_features: opts.cli_features.all_features.all(), // TODO
                     no_default_features: !opts.cli_features.uses_default_features,
                     profile: opts.build_config.requested_profile.to_string(),
                     target: Some(target.to_string()),
@@ -536,7 +536,7 @@ impl InstallInfo {
     /// This does not do Package/Source/Version checking.
     fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
         self.features == feature_set(&opts.cli_features.features)
-            && self.all_features == opts.cli_features.all_features
+            && self.all_features == opts.cli_features.all_features.all() // TODO
             && self.no_default_features != opts.cli_features.uses_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
             && (self.target.is_none() || self.target.as_deref() == Some(target))

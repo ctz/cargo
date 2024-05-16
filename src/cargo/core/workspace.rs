@@ -1244,7 +1244,7 @@ impl<'gctx> Workspace<'gctx> {
         cli_features: &CliFeatures,
     ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
         assert!(
-            !specs.is_empty() || cli_features.all_features,
+            !specs.is_empty() || cli_features.all_features.all(),
             "no specs requires all_features"
         );
         if specs.is_empty() {
@@ -1337,7 +1337,7 @@ impl<'gctx> Workspace<'gctx> {
         }
         CliFeatures {
             features: Rc::new(features),
-            all_features: cli_features.all_features,
+            all_features: cli_features.all_features.clone(),
             uses_default_features: cli_features.uses_default_features,
         }
     }
@@ -1550,7 +1550,7 @@ impl<'gctx> Workspace<'gctx> {
             // `cargo build -p foo`, where `foo` is not a member.
             // Do not allow any command-line flags (defaults only).
             if !(cli_features.features.is_empty()
-                && !cli_features.all_features
+                && cli_features.all_features.none()
                 && cli_features.uses_default_features)
             {
                 bail!("cannot specify features for packages outside of workspace");
@@ -1624,7 +1624,7 @@ impl<'gctx> Workspace<'gctx> {
                     Some(current) if member_id == current.package_id() => {
                         let feats = CliFeatures {
                             features: Rc::new(cwd_features.clone()),
-                            all_features: cli_features.all_features,
+                            all_features: cli_features.all_features.clone(),
                             uses_default_features: cli_features.uses_default_features,
                         };
                         Some((member, feats))
@@ -1648,7 +1648,7 @@ impl<'gctx> Workspace<'gctx> {
                                         .unwrap_or_default(),
                                 ),
                                 uses_default_features: true,
-                                all_features: cli_features.all_features,
+                                all_features: cli_features.all_features.clone(),
                             };
                             Some((member, feats))
                         } else {

@@ -214,6 +214,14 @@ pub trait CommandExt: Sized {
                 .help_heading(heading::FEATURE_SELECTION),
         )
         ._arg(
+            multi_opt(
+                "all-features-except",
+                "FEATURES",
+                "Activate all available features, except the given list of features",
+            )
+            .help_heading(heading::FEATURE_SELECTION),
+        )
+        ._arg(
             flag(
                 "no-default-features",
                 "Do not activate the `default` feature",
@@ -791,6 +799,7 @@ Run `{cmd}` to see possible targets."
         CliFeatures::from_command_line(
             &self._values_of("features"),
             self.flag("all-features"),
+            &self._values_of("all-features-except"),
             !self.flag("no-default-features"),
         )
     }

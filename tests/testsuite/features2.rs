@@ -172,6 +172,9 @@ fn inactive_target_optional() {
     p.cargo("run --all-features")
         .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
         .run();
+    p.cargo("run --all-features-except foo2")
+        .with_stdout("foo1\ndep1\ndep2\ncommon\nf1\nf2\nf3\nf4\n")
+        .run();
     p.cargo("run --features dep1")
         .with_stdout("dep1\nf1\n")
         .run();
@@ -188,6 +191,9 @@ fn inactive_target_optional() {
     switch_to_resolver_2(&p);
     p.cargo("run --all-features")
         .with_stdout("foo1\nfoo2\ndep1\ndep2\ncommon")
+        .run();
+    p.cargo("run --all-features-except foo2")
+        .with_stdout("foo1\ndep1\ndep2\ncommon")
         .run();
     p.cargo("run --features dep1").with_stdout("dep1\n").run();
     p.cargo("run --features foo1").with_stdout("foo1\n").run();
