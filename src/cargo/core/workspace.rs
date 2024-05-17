@@ -13,7 +13,7 @@ use url::Url;
 use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::CliFeatures;
+use crate::core::resolver::features::{CliFeatures, FeatureFilter};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{
     Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery,
@@ -1338,7 +1338,7 @@ impl<'gctx> Workspace<'gctx> {
         CliFeatures {
             features: Rc::new(features),
             all_features: cli_features.all_features.clone(),
-            uses_default_features: cli_features.uses_default_features,
+            default_features: cli_features.default_features.clone(),
         }
     }
 
@@ -1551,7 +1551,7 @@ impl<'gctx> Workspace<'gctx> {
             // Do not allow any command-line flags (defaults only).
             if !(cli_features.features.is_empty()
                 && cli_features.all_features.none()
-                && cli_features.uses_default_features)
+                && cli_features.default_features.all())
             {
                 bail!("cannot specify features for packages outside of workspace");
             }
@@ -1625,7 +1625,7 @@ impl<'gctx> Workspace<'gctx> {
                         let feats = CliFeatures {
                             features: Rc::new(cwd_features.clone()),
                             all_features: cli_features.all_features.clone(),
-                            uses_default_features: cli_features.uses_default_features,
+                            default_features: cli_features.default_features.clone(),
                         };
                         Some((member, feats))
                     }
@@ -1647,7 +1647,7 @@ impl<'gctx> Workspace<'gctx> {
                                         .remove(member.name().as_str())
                                         .unwrap_or_default(),
                                 ),
-                                uses_default_features: true,
+                                default_features: FeatureFilter::All,
                                 all_features: cli_features.all_features.clone(),
                             };
                             Some((member, feats))

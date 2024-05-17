@@ -611,6 +611,46 @@ fn default_feature_pulled_in() {
 }
 
 #[cargo_test]
+fn default_feature_except() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [features]
+                default = ["foo", "bar", "quux"]
+                foo = []
+                bar = []
+                quux = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    #[cfg(feature = "foo")] println!("foo");
+                    #[cfg(feature = "bar")] println!("bar");
+                    #[cfg(feature = "quux")] println!("quux");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("run").with_stdout("foo\nbar\nquux\n").run();
+
+    p.cargo("run --no-default-features").with_stdout("").run();
+
+    p.cargo("run --default-features-except bar,quux")
+        .with_stdout("foo\n")
+        .run();
+}
+
+#[cargo_test]
 fn cyclic_feature() {
     let p = project()
         .file(

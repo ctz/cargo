@@ -151,6 +151,7 @@ pub fn resolve_std<'gctx>(
         /*all_features*/ false,
         /*all_features_except*/ &[],
         /*uses_default_features*/ false,
+        /*default_features_except*/ &[],
     )?;
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,

@@ -1,4 +1,4 @@
-<svg width="852px" height="776px" xmlns="http://www.w3.org/2000/svg">
+<svg width="852px" height="866px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -63,45 +63,55 @@
 </tspan>
     <tspan x="10px" y="406px"><tspan class="fg-green bold">Feature Selection:</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>  </tspan><tspan class="fg-cyan bold">-F</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--features</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan><tspan>             Space or comma separated list of features to activate</tspan>
+    <tspan x="10px" y="424px"><tspan>  </tspan><tspan class="fg-cyan bold">-F</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--features</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-features</tspan><tspan>                    Activate all available features</tspan>
+    <tspan x="10px" y="442px"><tspan>          Space or comma separated list of features to activate</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-features-except</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan><tspan>  Activate all available features, except the given list of</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-features</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>                                        features</tspan>
+    <tspan x="10px" y="478px"><tspan>          Activate all available features</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-default-features</tspan><tspan>             Do not activate the `default` feature</tspan>
+    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-features-except</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="514px">
+    <tspan x="10px" y="514px"><tspan>          Activate all available features, except the given list of features</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan class="fg-green bold">Compilation Options:</tspan>
+    <tspan x="10px" y="532px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-default-features</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Build for the target triple</tspan>
+    <tspan x="10px" y="550px"><tspan>          Do not activate the `default` feature</tspan>
 </tspan>
-    <tspan x="10px" y="568px"><tspan>      </tspan><tspan class="fg-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
+    <tspan x="10px" y="568px"><tspan>      </tspan><tspan class="fg-cyan bold">--default-features-except</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="586px"><tspan>  </tspan><tspan class="fg-cyan bold">-j</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--jobs</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;N&gt;</tspan><tspan>                Number of parallel jobs, defaults to # of CPUs.</tspan>
+    <tspan x="10px" y="586px"><tspan>          Activate the `default` feature, but exclude the given list from its dependent features</tspan>
 </tspan>
-    <tspan x="10px" y="604px"><tspan>      </tspan><tspan class="fg-cyan bold">--keep-going</tspan><tspan>              Do not abort the build as soon as there is an error</tspan>
+    <tspan x="10px" y="604px">
 </tspan>
-    <tspan x="10px" y="622px">
+    <tspan x="10px" y="622px"><tspan class="fg-green bold">Compilation Options:</tspan>
 </tspan>
-    <tspan x="10px" y="640px"><tspan class="fg-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="640px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Build for the target triple</tspan>
 </tspan>
-    <tspan x="10px" y="658px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+    <tspan x="10px" y="658px"><tspan>      </tspan><tspan class="fg-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="676px"><tspan>  </tspan><tspan class="fg-cyan bold">-j</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--jobs</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;N&gt;</tspan><tspan>                Number of parallel jobs, defaults to # of CPUs.</tspan>
 </tspan>
-    <tspan x="10px" y="694px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="694px"><tspan>      </tspan><tspan class="fg-cyan bold">--keep-going</tspan><tspan>              Do not abort the build as soon as there is an error</tspan>
 </tspan>
-    <tspan x="10px" y="712px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="712px">
 </tspan>
-    <tspan x="10px" y="730px">
+    <tspan x="10px" y="730px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="748px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help package</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="748px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="766px">
+    <tspan x="10px" y="766px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+</tspan>
+    <tspan x="10px" y="784px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+</tspan>
+    <tspan x="10px" y="802px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+</tspan>
+    <tspan x="10px" y="820px">
+</tspan>
+    <tspan x="10px" y="838px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help package</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="856px">
 </tspan>
   </text>
 

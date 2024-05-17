@@ -13,8 +13,8 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, FeatureFilter, RequestedFeatures, ResolveOpts,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -346,9 +346,11 @@ fn build_requirements<'a, 'b: 'a>(
 ) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
 
-    let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
+    let handle_default = |uses_default_features, reqs: &mut Requirements<'_>, maybe_filter| {
         if uses_default_features && s.features().contains_key("default") {
-            if let Err(e) = reqs.require_feature(InternedString::new("default")) {
+            if let Err(e) =
+                reqs.require_feature_filter(InternedString::new("default"), maybe_filter)
+            {
                 return Err(e.into_activate_error(parent, s));
             }
         }
@@ -359,7 +361,7 @@ fn build_requirements<'a, 'b: 'a>(
         RequestedFeatures::CliFeatures(CliFeatures {
             features,
             all_features,
-            uses_default_features,
+            default_features,
         }) => {
             for key in s
                 .features()
@@ -376,7 +378,13 @@ fn build_requirements<'a, 'b: 'a>(
                     return Err(e.into_activate_error(parent, s));
                 }
             }
-            handle_default(*uses_default_features, &mut reqs)?;
+
+            match default_features {
+                FeatureFilter::All | FeatureFilter::AllExcept(_) => {
+                    handle_default(true, &mut reqs, Some(default_features))?
+                }
+                FeatureFilter::None => {}
+            };
         }
         RequestedFeatures::DepFeatures {
             features,
@@ -387,7 +395,7 @@ fn build_requirements<'a, 'b: 'a>(
                     return Err(e.into_activate_error(parent, s));
                 }
             }
-            handle_default(*uses_default_features, &mut reqs)?;
+            handle_default(*uses_default_features, &mut reqs, None)?;
         }
     }
 
@@ -469,6 +477,14 @@ impl Requirements<'_> {
     }
 
     fn require_feature(&mut self, feat: InternedString) -> Result<(), RequirementError> {
+        self.require_feature_filter(feat, None)
+    }
+
+    fn require_feature_filter(
+        &mut self,
+        feat: InternedString,
+        filter: Option<&FeatureFilter>,
+    ) -> Result<(), RequirementError> {
         if !self.features.insert(feat) {
             // Already seen this feature.
             return Ok(());
@@ -478,7 +494,12 @@ impl Requirements<'_> {
             return Err(RequirementError::MissingFeature(feat));
         };
 
-        for fv in fvs {
+        for fv in fvs.iter().filter(|feat| {
+            filter
+                .as_ref()
+                .map(|filter| filter.includes(feat))
+                .unwrap_or(true)
+        }) {
             if let FeatureValue::Feature(dep_feat) = fv {
                 if *dep_feat == feat {
                     return Err(RequirementError::Cycle(feat));

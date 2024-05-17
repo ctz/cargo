@@ -228,6 +228,14 @@ pub trait CommandExt: Sized {
             )
             .help_heading(heading::FEATURE_SELECTION),
         )
+        ._arg(
+            multi_opt(
+                "default-features-except",
+                "FEATURES",
+                "Activate the `default` feature, but exclude the given list from its dependent features",
+            )
+            .help_heading(heading::FEATURE_SELECTION),
+        )
     }
 
     fn arg_release(self, release: &'static str) -> Self {
@@ -801,6 +809,7 @@ Run `{cmd}` to see possible targets."
             self.flag("all-features"),
             &self._values_of("all-features-except"),
             !self.flag("no-default-features"),
+            &self._values_of("default-features-except"),
         )
     }
 

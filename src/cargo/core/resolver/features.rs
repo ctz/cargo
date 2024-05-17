@@ -254,8 +254,8 @@ pub struct CliFeatures {
     pub features: Rc<BTreeSet<FeatureValue>>,
     /// The `--all-features` & `--all-features-except` flag.
     pub all_features: FeatureFilter,
-    /// Inverse of `--no-default-features` flag.
-    pub uses_default_features: bool,
+    /// Inverse of `--no-default-features` flag, or `--default-features-except` flag
+    pub default_features: FeatureFilter,
 }
 
 impl CliFeatures {
@@ -265,15 +265,21 @@ impl CliFeatures {
         all_features: bool,
         all_features_except: &[String],
         uses_default_features: bool,
+        default_features_except: &[String],
     ) -> CargoResult<CliFeatures> {
         let features = Rc::new(CliFeatures::split_features(features));
         let all_features_except = Rc::new(CliFeatures::split_features(all_features_except));
+        let default_features_except = Rc::new(CliFeatures::split_features(default_features_except));
 
         if all_features && !all_features_except.is_empty() {
             bail!("--all-features and --all-features-except are mutually exclusive");
         }
 
-        for set in [&features, &all_features_except] {
+        if !uses_default_features && !default_features_except.is_empty() {
+            bail!("--no-default-features and --default-features-except are mutually exclusive");
+        }
+
+        for set in [&features, &all_features_except, &default_features_except] {
             // Some early validation to ensure correct syntax.
             for feature in set.iter() {
                 match feature {
@@ -302,10 +308,18 @@ impl CliFeatures {
             FeatureFilter::None
         };
 
+        let default_features = if !default_features_except.is_empty() {
+            FeatureFilter::AllExcept(default_features_except)
+        } else if uses_default_features {
+            FeatureFilter::All
+        } else {
+            FeatureFilter::None
+        };
+
         Ok(CliFeatures {
             features,
             all_features,
-            uses_default_features,
+            default_features,
         })
     }
 
@@ -317,7 +331,7 @@ impl CliFeatures {
                 true => FeatureFilter::All,
                 false => FeatureFilter::None,
             },
-            uses_default_features: true,
+            default_features: FeatureFilter::All,
         }
     }
 
@@ -535,7 +549,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     ) -> CargoResult<()> {
         let member_features = self.ws.members_with_features(specs, cli_features)?;
         for (member, cli_features) in &member_features {
-            let fvs = self.fvs_from_requested(member.package_id(), cli_features);
+            let (fvs, default_and_filter) =
+                self.fvs_from_requested(member.package_id(), cli_features);
             let fk = if self.track_for_host && self.is_proc_macro(member.package_id()) {
                 // Also activate for normal dependencies. This is needed if the
                 // proc-macro includes other targets (like binaries or tests),
@@ -544,12 +559,15 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 // `--workspace`), this forces feature unification with normal
                 // dependencies. This is part of the bigger problem where
                 // features depend on which packages are built.
-                self.activate_pkg(member.package_id(), FeaturesFor::default(), &fvs)?;
+                self.activate_pkg(member.package_id(), FeaturesFor::default(), &fvs, None)?;
                 FeaturesFor::HostDep
             } else {
                 FeaturesFor::default()
             };
-            self.activate_pkg(member.package_id(), fk, &fvs)?;
+            self.activate_pkg(member.package_id(), fk, &fvs, None)?;
+            if let Some((default_feature, filter)) = default_and_filter {
+                self.activate_pkg(member.package_id(), fk, &[default_feature], Some(&filter))?;
+            }
         }
         Ok(())
     }
@@ -563,6 +581,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         pkg_id: PackageId,
         fk: FeaturesFor,
         fvs: &[FeatureValue],
+        filter: Option<&FeatureFilter>,
     ) -> CargoResult<()> {
         tracing::trace!("activate_pkg {} {}", pkg_id.name(), fk);
         // Add an empty entry to ensure everything is covered. This is intended for
@@ -572,7 +591,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             .entry((pkg_id, fk.apply_opts(&self.opts)))
             .or_insert_with(BTreeSet::new);
         for fv in fvs {
-            self.activate_fv(pkg_id, fk, fv)?;
+            self.activate_fv(pkg_id, fk, fv, filter)?;
         }
         if !self.processed_deps.insert((pkg_id, fk)) {
             // Already processed dependencies. There's no need to process them
@@ -599,7 +618,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 }
                 // Recurse into the dependency.
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_pkg(dep_pkg_id, dep_fk, &fvs)?;
+                self.activate_pkg(dep_pkg_id, dep_fk, &fvs, None)?;
             }
         }
         Ok(())
@@ -611,11 +630,12 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         pkg_id: PackageId,
         fk: FeaturesFor,
         fv: &FeatureValue,
+        filter: Option<&FeatureFilter>,
     ) -> CargoResult<()> {
         tracing::trace!("activate_fv {} {} {}", pkg_id.name(), fk, fv);
         match fv {
             FeatureValue::Feature(f) => {
-                self.activate_rec(pkg_id, fk, *f)?;
+                self.activate_rec(pkg_id, fk, *f, filter)?;
             }
             FeatureValue::Dep { dep_name } => {
                 self.activate_dependency(pkg_id, fk, *dep_name)?;
@@ -633,11 +653,14 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
 
     /// Activate the given feature for the given package, and then recursively
     /// activate any other features that feature enables.
+    ///
+    /// Apply `filter` to the first level of dependent features (but not recursively).
     fn activate_rec(
         &mut self,
         pkg_id: PackageId,
         fk: FeaturesFor,
         feature_to_enable: InternedString,
+        filter: Option<&FeatureFilter>,
     ) -> CargoResult<()> {
         tracing::trace!(
             "activate_rec {} {} feat={}",
@@ -666,8 +689,13 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             );
             return Ok(());
         };
-        for fv in fvs {
-            self.activate_fv(pkg_id, fk, fv)?;
+        for fv in fvs.iter().filter(|fv| {
+            filter
+                .as_ref()
+                .map(|filter| filter.includes(fv))
+                .unwrap_or(true)
+        }) {
+            self.activate_fv(pkg_id, fk, fv, None)?;
         }
         Ok(())
     }
@@ -705,11 +733,11 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                             dep_feature
                         );
                         let fv = FeatureValue::new(*dep_feature);
-                        self.activate_fv(dep_pkg_id, dep_fk, &fv)?;
+                        self.activate_fv(dep_pkg_id, dep_fk, &fv, None)?;
                     }
                 }
                 let fvs = self.fvs_from_dependency(dep_pkg_id, dep);
-                self.activate_pkg(dep_pkg_id, dep_fk, &fvs)?;
+                self.activate_pkg(dep_pkg_id, dep_fk, &fvs, None)?;
             }
         }
         Ok(())
@@ -756,7 +784,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
 
                     // Activate the dependency on self.
                     let fv = FeatureValue::Dep { dep_name };
-                    self.activate_fv(pkg_id, fk, &fv)?;
+                    self.activate_fv(pkg_id, fk, &fv, None)?;
                     if !weak {
                         // The old behavior before weak dependencies were
                         // added is to also enables a feature of the same
@@ -768,13 +796,13 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         let summary = self.resolve.summary(pkg_id);
                         let feature_map = summary.features();
                         if feature_map.contains_key(&dep_name) {
-                            self.activate_rec(pkg_id, fk, dep_name)?;
+                            self.activate_rec(pkg_id, fk, dep_name, None)?;
                         }
                     }
                 }
                 // Activate the feature on the dependency.
                 let fv = FeatureValue::new(dep_feature);
-                self.activate_fv(dep_pkg_id, dep_fk, &fv)?;
+                self.activate_fv(dep_pkg_id, dep_fk, &fv, None)?;
             }
         }
         Ok(())
@@ -797,19 +825,33 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     }
 
     /// Returns Vec of FeatureValues from a set of command-line features.
+    ///
+    /// Plus (if needed) the default feature name and associated filter.  If no
+    /// filter is required, the default feature name is included in the vec.
     fn fvs_from_requested(
         &self,
         pkg_id: PackageId,
         cli_features: &CliFeatures,
-    ) -> Vec<FeatureValue> {
+    ) -> (Vec<FeatureValue>, Option<(FeatureValue, FeatureFilter)>) {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
 
         let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
         let default = InternedString::new("default");
-        if cli_features.uses_default_features && feature_map.contains_key(&default) {
-            result.push(FeatureValue::Feature(default));
-        }
+        let default_and_filter = match (
+            &cli_features.default_features,
+            feature_map.contains_key(&default),
+        ) {
+            (FeatureFilter::All, true) => {
+                result.push(FeatureValue::Feature(default));
+                None
+            }
+            (FeatureFilter::AllExcept(_), true) => Some((
+                FeatureValue::Feature(default),
+                cli_features.default_features.clone(),
+            )),
+            _ => None,
+        };
 
         result.extend(
             feature_map
@@ -818,7 +860,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 .filter(|feat| cli_features.all_features.includes(feat)),
         );
 
-        result
+        (result, default_and_filter)
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.

@@ -507,7 +507,8 @@ fn add_cli_features(
             .filter(|feat| cli_features.all_features.includes(feat)),
     );
 
-    if cli_features.uses_default_features {
+    if cli_features.default_features.all() {
+        // TODO
         to_add.insert(FeatureValue::Feature(InternedString::new("default")));
     }
     to_add.extend(cli_features.features.iter().cloned());
